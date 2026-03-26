@@ -1,10 +1,10 @@
-# E-Rechnung Generator — Technischer Implementierungsplan
+# E-Rechnung Generator — Implementierungsplan
 
 ## Übersicht
 
-Kostenloser, quelloffener E-Rechnung-Generator. Generiert XRechnung-XML (EN 16931) und ZUGFeRD-PDF (PDF/A-3) aus einem Webformular. Open Source (MIT), Web + Android + iOS.
+Kostenloser, quelloffener E-Rechnung-Generator für den DACH-Raum. Generiert XRechnung-XML (EN 16931) und ZUGFeRD-PDF (PDF/A-3) aus einem Webformular. Kein Account, keine serverseitige Datenspeicherung, Open Source (MIT). Opt-in localStorage für Verkäufer-Stammdaten.
 
-**Repo:** `github.com/V3SP45/e` (public)
+**Repo:** `github.com/V3SP45/e`
 **Hosting:** Vercel Free Tier
 **Lizenz:** MIT
 
@@ -34,59 +34,60 @@ Kostenloser, quelloffener E-Rechnung-Generator. Generiert XRechnung-XML (EN 1693
             │                    │
             │         ┌──────────▼─────────┐
             │         │ Vercel Serverless   │
-            │         │ node-zugferd        │
-            │         │ JSON → PDF/A-3      │
+            │         │ PDF/A-3 Generierung │
             │         │ (kein Datenspeicher)│
             │         └────────────────────┘
-            │
-       Kein Server nötig
-       Daten bleiben im Browser
 ```
 
 ### Design-Entscheidungen
 
 | Entscheidung | Begründung |
 |---|---|
-| **Vite + React statt Next.js** | Pure SPA, kein SSR nötig, Capacitor-kompatibel für App Stores |
-| **Client-side XML** | Kein Server = keine Datenschutz-Bedenken, offline-fähig |
-| **Serverless für PDF** | PDF/A-3-Generierung im Browser nicht möglich (kein JS-Library kann das), Vercel Free Tier reicht |
-| **Kein Monorepo** | Overkill für ein Single-Page-Tool |
-| **shadcn/ui** | Copy-paste Komponenten, kein Dependency-Lock-in, Tailwind-basiert |
+| **Vite + React statt Next.js** | Pure SPA, kein SSR nötig, Capacitor-kompatibel |
+| **Client-side XML** | Kein Server = kein Datenschutz-Problem, offline-fähig |
+| **Serverless nur für PDF** | PDF/A-3 im Browser nicht möglich, Vercel Free Tier reicht |
+| **shadcn/ui** | Copy-paste Komponenten, kein Lock-in, Tailwind-basiert |
+| **Kein Monorepo** | Single-Page-Tool, Monorepo wäre Overhead |
 
 ---
 
 ## Tech-Stack
 
-### Dependencies
+### Core Dependencies
 
 | Paket | Version | Zweck |
 |---|---|---|
-| **react** | ^19 | UI-Framework |
-| **react-dom** | ^19 | DOM-Rendering |
-| **vite** | ^8 | Build-Tool, Dev-Server |
-| **typescript** | ^5.9 | Type Safety |
-| **tailwindcss** | ^4 | Styling |
-| **react-hook-form** | ^7 | Formular-Management |
-| **@hookform/resolvers** | ^5 | Zod-Integration für RHF |
-| **zod** | ^4 | Schema-Validierung |
-| **@e-invoice-eu/core** | ^3 | XRechnung/ZUGFeRD XML-Generierung (EN 16931) |
-| **lucide-react** | ^1 | Icons |
+| react | ^19 | UI-Framework |
+| react-dom | ^19 | DOM-Rendering |
+| vite | ^6 | Build-Tool, Dev-Server |
+| typescript | ^5.7 | Type Safety |
+| tailwindcss | ^4 | Styling |
+| react-hook-form | ^7 | Formular-Management |
+| @hookform/resolvers | ^5 | Zod-Integration für RHF |
+| zod | ^3 | Schema-Validierung |
+| lucide-react | ^0.468 | Icons |
+
+### E-Rechnung Libraries (zu verifizieren)
+
+| Paket | Zweck | Risiko |
+|---|---|---|
+| **@e-invoice-eu/core** | XRechnung/ZUGFeRD XML (EN 16931) | Niedrig — aktiv maintained, gute Docs |
+| **node-zugferd** ODER **pdf-lib + manuelle Einbettung** | ZUGFeRD PDF/A-3 | **Hoch** — muss evaluiert werden |
+
+> **AKTION vor Phase 2:** Library-Evaluation für PDF/A-3. Optionen prüfen:
+> 1. `node-zugferd` — wenn stabil und maintained
+> 2. `@e-invoice-eu/core` hat evtl. eigene PDF-Unterstützung
+> 3. `pdf-lib` + manuelles XML-Embedding als Fallback
+> 4. Puppeteer/Chromium-basierte Lösung als letzter Ausweg (teuer auf Serverless)
 
 ### Dev Dependencies
 
 | Paket | Zweck |
 |---|---|
-| **@vitejs/plugin-react** | React Fast Refresh |
-| **eslint** + Plugins | Linting |
-| **vitest** | Unit Tests |
-| **@testing-library/react** | Komponenten-Tests |
-
-### Serverless (api/)
-
-| Paket | Zweck |
-|---|---|
-| **node-zugferd** | ZUGFeRD PDF/A-3 Generierung |
-| **@vercel/node** | Vercel Serverless Function Runtime |
+| @vitejs/plugin-react | React Fast Refresh |
+| eslint + Plugins | Linting |
+| vitest | Unit Tests |
+| @testing-library/react | Komponenten-Tests |
 
 ---
 
@@ -97,208 +98,169 @@ e/
 ├── src/
 │   ├── components/
 │   │   ├── ui/                    # shadcn/ui Basis-Komponenten
-│   │   │   ├── button.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── label.tsx
-│   │   │   ├── select.tsx
-│   │   │   ├── card.tsx
-│   │   │   └── separator.tsx
-│   │   ├── InvoiceForm.tsx        # Hauptformular (alle Felder)
+│   │   ├── InvoiceForm.tsx        # Hauptformular (orchestriert Sections)
 │   │   ├── SellerSection.tsx      # Verkäufer-Daten
 │   │   ├── BuyerSection.tsx       # Käufer-Daten
+│   │   ├── InvoiceMetaSection.tsx # Rechnungsnummer, Datum, etc.
 │   │   ├── LineItemsSection.tsx   # Rechnungspositionen (dynamisch)
 │   │   ├── PaymentSection.tsx     # Zahlungsbedingungen
-│   │   ├── TotalsDisplay.tsx      # Netto/USt/Brutto Berechnung
-│   │   ├── Preview.tsx            # Rechnungs-Vorschau (formatiert)
+│   │   ├── TotalsDisplay.tsx      # Netto/USt/Brutto live-Berechnung
+│   │   ├── Preview.tsx            # Rechnungs-Vorschau
 │   │   ├── DownloadButtons.tsx    # XML + PDF Download
-│   │   ├── Header.tsx             # App-Header + Branding
-│   │   └── Footer.tsx             # Impressum, GitHub-Link
+│   │   ├── Header.tsx             # App-Header
+│   │   └── Footer.tsx             # GitHub-Link, Impressum
 │   ├── lib/
 │   │   ├── schema.ts             # Zod-Schemas (Invoice, Seller, Buyer, LineItem)
-│   │   ├── xrechnung.ts          # XRechnung XML-Generierung
-│   │   ├── calculations.ts       # Netto/USt/Brutto Berechnung
-│   │   ├── format.ts             # Währung, Datum, Nummern formatieren
-│   │   ├── download.ts           # File-Download Utilities
-│   │   └── constants.ts          # USt-Sätze, Einheiten, Ländercodes
+│   │   ├── xrechnung.ts          # Mapping Formular → @e-invoice-eu/core → XML
+│   │   ├── calculations.ts       # Netto/USt/Brutto Logik
+│   │   ├── format.ts             # Währung, Datum, Nummern
+│   │   ├── download.ts           # Blob-Download Utilities
+│   │   └── constants.ts          # USt-Sätze, UN/ECE Einheiten, Ländercodes
 │   ├── hooks/
-│   │   ├── useInvoiceForm.ts     # Form-State + Berechnung
+│   │   ├── useInvoiceForm.ts     # Form-State + live Berechnung
 │   │   └── useXRechnung.ts       # XML-Generierung Hook
-│   ├── App.tsx                    # Hauptlayout
-│   ├── main.tsx                   # Entry Point
-│   └── index.css                  # Tailwind Base + Custom Styles
+│   ├── App.tsx
+│   ├── main.tsx
+│   └── index.css                  # Tailwind Imports
 ├── api/
 │   └── zugferd.ts                 # Vercel Serverless: JSON → ZUGFeRD PDF/A-3
 ├── public/
-│   ├── manifest.json              # PWA-Manifest
 │   ├── favicon.svg
-│   └── og-image.png               # Open Graph Image für SEO
-├── specs/
-│   ├── formular.md                # Spec: Formularfelder + Validierung
-│   ├── xrechnung.md               # Spec: XML-Generierung
-│   └── zugferd-pdf.md             # Spec: PDF/A-3 Generierung
+│   └── og-image.png
 ├── __tests__/
-│   ├── schema.test.ts             # Validierungs-Tests
-│   ├── calculations.test.ts       # Berechnungs-Tests
-│   └── xrechnung.test.ts          # XML-Generierungs-Tests
-├── PROJEKTPLAN.md                 # ← Dieses Dokument
-├── AGENTS.md                      # OpenClaw System Prompt
-├── CLAUDE.md                      # Claude Code Kontext
-├── README.md                      # Open Source Doku
-├── LICENSE                        # MIT
+│   ├── schema.test.ts
+│   ├── calculations.test.ts
+│   └── xrechnung.test.ts
+├── PROJEKTPLAN.md
+├── AGENTS.md
+├── CLAUDE.md
+├── README.md
+├── LICENSE
 ├── index.html
 ├── vite.config.ts
-├── tailwind.config.ts
 ├── tsconfig.json
-├── vercel.json                    # Serverless Function Config
+├── vercel.json
 └── package.json
 ```
 
 ---
 
-## Formularfelder (UStG §14 Pflichtangaben)
+## Datenmodell (Formularfelder)
 
 ### Rechnungs-Stammdaten
 
-| Feld | ID | Pflicht | Typ | Validierung |
-|---|---|---|---|---|
-| Rechnungsnummer | BT-1 | Ja | Text | Nicht leer, max 50 Zeichen |
-| Rechnungsdatum | BT-2 | Ja | Datum | Gültiges ISO-Datum |
-| Rechnungsart | BT-3 | Ja | Select | 380 (Rechnung), 381 (Gutschrift), 384 (Korrektur) |
-| Währung | BT-5 | Ja | Select | EUR (Default), CHF, USD |
-| Leistungsdatum/-zeitraum | BT-72/73 | Ja | Datum | Start ≤ Ende |
-| Fälligkeitsdatum | BT-9 | Nein | Datum | ≥ Rechnungsdatum |
+| Feld | BT-ID | Pflicht | Validierung |
+|---|---|---|---|
+| Rechnungsnummer | BT-1 | Ja | Nicht leer, max 50 Zeichen |
+| Rechnungsdatum | BT-2 | Ja | Gültiges ISO-Datum |
+| Rechnungsart | BT-3 | Ja | 380 (Rechnung), 381 (Gutschrift), 384 (Korrektur) |
+| Währung | BT-5 | Ja | EUR (Default), CHF, USD |
+| Leistungszeitraum Start | BT-73 | Ja | Gültiges Datum |
+| Leistungszeitraum Ende | BT-74 | Ja | ≥ Start |
+| Fälligkeitsdatum | BT-9 | Nein | ≥ Rechnungsdatum |
+| Buyer Reference | BT-10 | Ja | XRechnung-Pflicht (Leitweg-ID oder freier Text) |
 
 ### Verkäufer (Seller)
 
-| Feld | ID | Pflicht | Validierung |
+| Feld | BT-ID | Pflicht | Validierung |
 |---|---|---|---|
 | Name | BT-27 | Ja | Min 2 Zeichen |
 | Straße | BT-35 | Ja | Nicht leer |
-| PLZ | BT-38 | Ja | DE: 5 Ziffern, AT: 4 Ziffern, CH: 4 Ziffern |
+| PLZ | BT-38 | Ja | Länderspezifisch (DE: 5, AT/CH: 4 Ziffern) |
 | Ort | BT-37 | Ja | Min 2 Zeichen |
-| Land | BT-40 | Ja | ISO 3166-1 alpha-2 (DE, AT, CH) |
-| USt-ID | BT-31 | Ja | DE: `DE[0-9]{9}`, AT: `ATU[0-9]{8}`, CH: `CHE-[0-9]{3}\.[0-9]{3}\.[0-9]{3}` |
-| Steuernummer | BT-32 | Nein | Format variiert nach Land |
+| Land | BT-40 | Ja | ISO 3166-1 alpha-2 |
+| USt-ID | BT-31 | Ja* | DE: `DE\d{9}`, AT: `ATU\d{8}`, CH: `CHE-\d{3}\.\d{3}\.\d{3}` |
+| Steuernummer | BT-32 | Nein | Alternativ zu USt-ID |
 | E-Mail | BT-34 | Nein | E-Mail-Format |
-| Telefon | — | Nein | Optional |
-| Bankverbindung (IBAN) | BT-84 | Nein | IBAN-Format |
+| IBAN | BT-84 | Nein | IBAN-Format |
 | BIC | BT-86 | Nein | 8 oder 11 Zeichen |
+
+*USt-ID oder Steuernummer — mindestens eins muss angegeben sein.
 
 ### Käufer (Buyer)
 
-| Feld | ID | Pflicht | Validierung |
+| Feld | BT-ID | Pflicht | Validierung |
 |---|---|---|---|
 | Name | BT-44 | Ja | Min 2 Zeichen |
 | Straße | BT-50 | Ja | Nicht leer |
-| PLZ | BT-53 | Ja | Länder-spezifisch |
+| PLZ | BT-53 | Ja | Länderspezifisch |
 | Ort | BT-52 | Ja | Min 2 Zeichen |
 | Land | BT-55 | Ja | ISO 3166-1 alpha-2 |
-| USt-ID | BT-48 | Nein | Länder-Format |
-| Leitweg-ID | BT-10 | Nein | `[0-9]{2,12}-[0-9A-Z]{1,30}-[0-9]{2}` |
+| USt-ID | BT-48 | Nein | Länderspezifisch |
 
 ### Rechnungspositionen (Line Items)
 
-| Feld | ID | Pflicht | Validierung |
+| Feld | BT-ID | Pflicht | Validierung |
 |---|---|---|---|
 | Beschreibung | BT-153 | Ja | Min 2 Zeichen |
 | Menge | BT-129 | Ja | > 0, max 2 Dezimalstellen |
-| Einheit | BT-130 | Ja | UN/ECE Rec 20 (H87=Stück, HUR=Stunde, DAY=Tag, MON=Monat) |
+| Einheit | BT-130 | Ja | UN/ECE Rec 20 Code |
 | Einzelpreis (netto) | BT-146 | Ja | ≥ 0, max 2 Dezimalstellen |
-| USt-Kategorie | BT-151 | Ja | S=Standard, Z=Null, E=Befreit, AE=Reverse Charge |
-| USt-Satz | BT-152 | Ja | 0%, 7%, 19% (DE); 0%, 10%, 13%, 20% (AT); 0%, 2.6%, 3.8%, 8.1% (CH) |
+| USt-Kategorie | BT-151 | Ja | S / Z / E / AE |
+| USt-Satz | BT-152 | Ja | Abhängig von Land + Kategorie |
 
-**Dynamisch:** Mindestens 1 Position, beliebig viele hinzufügbar via „+ Position"-Button.
+Mindestens 1 Position. Dynamisch erweiterbar.
 
-### Automatische Berechnungen
+### Berechnungslogik
 
 ```
-Position Netto    = Menge × Einzelpreis
-Position USt      = Position Netto × USt-Satz
-Position Brutto   = Position Netto + Position USt
+Position Netto  = Menge × Einzelpreis
+Position USt    = Position Netto × (USt-Satz / 100)
+Position Brutto = Position Netto + Position USt
 
-Gesamt Netto      = Σ aller Position Netto
-Gesamt USt        = Σ aller Position USt (gruppiert nach USt-Satz)
-Gesamt Brutto     = Gesamt Netto + Gesamt USt
+Gesamt Netto    = Σ Position Netto
+Gesamt USt      = Σ Position USt (gruppiert nach USt-Satz für XML)
+Gesamt Brutto   = Gesamt Netto + Gesamt USt
 ```
+
+Rundung: Auf 2 Dezimalstellen pro Position, dann summieren (nicht umgekehrt).
 
 ---
 
-## XRechnung XML-Generierung
+## XRechnung-Generierung
 
-### Library: `@e-invoice-eu/core`
+### Library: @e-invoice-eu/core
 
-- 100% Client-Side (Browser)
-- Unterstützt: EN 16931, XRechnung, ZUGFeRD/Factur-X, UBL, CII
-- Input: JSON-Objekt mit Invoice-Daten
-- Output: Valides XML (CII oder UBL Syntax)
-- Lizenz: WTFPL (Do What The Fuck You Want To Public License)
+- 100% Client-Side
+- Input: JSON-Objekt → Output: CII XML
+- Unterstützt XRechnung CIUS
 
-### XRechnung-Profil
+### XRechnung-spezifische Regeln (BR-DE-*)
 
-XRechnung ist eine **CIUS** (Core Invoice Usage Specification) auf Basis von EN 16931. Gegenüber dem Basis-Standard hat XRechnung zusätzliche Regeln:
-
-- Leitweg-ID (BT-10) ist Pflicht bei Rechnungen an öffentliche Auftraggeber
-- Buyer Reference (BT-10) ist immer Pflicht
-- Payment Means (BG-16) ist Pflicht
-- Spezifische Schematron-Regeln (BR-DE-*)
+- BT-10 (Buyer Reference) ist **immer** Pflicht
+- BG-16 (Payment Means) ist Pflicht → mindestens Zahlungsart angeben
+- Leitweg-ID für öffentliche Auftraggeber
+- Seller muss USt-ID ODER Steuernummer haben
 
 ### Generierungsflow
 
 ```
-Formular-Daten (Zod-validiert)
-    ↓
-Mapping auf @e-invoice-eu/core JSON-Format
-    ↓
-@e-invoice-eu/core.generate({ format: 'xrechnung-cii' })
-    ↓
-Valides XRechnung CII XML
-    ↓
-Blob → Download als .xml
+Formular (Zod-validiert)
+  → Mapping auf @e-invoice-eu/core Format
+  → core.generate({ format: 'xrechnung-cii' })
+  → XML String
+  → Blob Download als .xml
 ```
 
 ---
 
-## ZUGFeRD PDF/A-3 Generierung
+## ZUGFeRD PDF/A-3
 
-### Serverless Function: `api/zugferd.ts`
+### Serverless Endpoint: POST /api/zugferd
 
-**Endpoint:** `POST /api/zugferd`
-**Input:** Invoice-JSON (identisch zum Formular-State)
-**Output:** PDF/A-3 Binary (application/pdf)
+**Input:** Invoice-JSON (gleiche Struktur wie Formular-State)
+**Output:** `application/pdf` Binary
 
 ### Flow
 
 ```
-Client: POST /api/zugferd { invoice: {...} }
-    ↓
-Server: Validierung (Zod)
-    ↓
-Server: XRechnung XML generieren (@e-invoice-eu/core)
-    ↓
-Server: PDF generieren mit Rechnungsdaten
-    ↓
-Server: XML in PDF/A-3 einbetten (node-zugferd)
-    ↓
-Client: PDF als Blob empfangen → Download
-```
-
-### vercel.json
-
-```json
-{
-  "functions": {
-    "api/zugferd.ts": {
-      "memory": 256,
-      "maxDuration": 10
-    }
-  }
-}
+Client POST → Server validiert (Zod) → XML generieren → PDF erzeugen
+→ XML in PDF/A-3 einbetten → PDF Binary zurück → Client Download
 ```
 
 ### Datenschutz
 
-- Keine Daten werden gespeichert
-- Kein Logging von Invoice-Inhalten
+- Keine Daten werden gespeichert oder geloggt
 - Serverless Function ist stateless
 - Daten existieren nur während der Request-Verarbeitung
 
@@ -306,74 +268,131 @@ Client: PDF als Blob empfangen → Download
 
 ## Phasenplan
 
-### Phase 1: Grundgerüst (Tag 1, ~30 Min)
+### Phase 0: Vorbereitung & Evaluation
 
-- [x] Vite + React + TypeScript initialisieren
-- [ ] Tailwind konfigurieren
-- [ ] shadcn/ui Basis-Komponenten
-- [ ] CLAUDE.md schreiben
-- [ ] Git-Repo + GitHub Remote (public, MIT)
-- [ ] Specs schreiben (3 Dateien in specs/)
+**Ziel:** Fundament legen, Risiken eliminieren.
 
-### Phase 2: Formular + XRechnung (Tag 1–2, Agenten-Arbeit)
+**Tasks:**
+- [ ] Library-Check: `@e-invoice-eu/core` installieren, Beispiel-XML generieren, gegen Validator prüfen
+- [ ] Library-Check: PDF/A-3-Lösung evaluieren (node-zugferd vs. Alternativen)
+- [ ] Vite + React + TypeScript + Tailwind + shadcn/ui initialisieren
+- [ ] Projektstruktur anlegen (leere Dateien/Ordner)
+- [ ] Path-Alias `@/` konfigurieren
+- [ ] ESLint + Vitest konfigurieren
+- [ ] `pnpm dev` und `pnpm build` laufen fehlerfrei
+- [ ] vercel.json anlegen
+- [ ] LICENSE (MIT) + README.md Grundgerüst
 
-**Parallel ausführbar:**
-- **Agent A:** Zod-Schemas + Berechnungslogik (`lib/schema.ts`, `lib/calculations.ts`)
-- **Agent B:** Formular-Komponenten (`components/InvoiceForm.tsx` + Sections)
-- **Agent C:** XRechnung-Integration (`lib/xrechnung.ts`, `hooks/useXRechnung.ts`)
+**Done when:** `pnpm dev` zeigt leere React-App, `pnpm build` + `pnpm lint` laufen durch, Library-Evaluation abgeschlossen und Ergebnis dokumentiert.
 
-**Sequenziell danach:**
-- Integration: Form → Schema → XML → Download
-- Tests: Schema-Validierung, Berechnung, XML-Output
+### Phase 1: Datenmodell & Kernlogik
 
-### Phase 3: ZUGFeRD PDF (Tag 2–3)
+**Ziel:** Die gesamte Nicht-UI-Logik steht und ist getestet.
 
-- Serverless Function (`api/zugferd.ts`)
-- PDF-Generierung mit node-zugferd
-- Download-Button in UI
-- Test gegen KoSIT-Validator
+**Tasks:**
+- [ ] `lib/constants.ts` — USt-Sätze, Einheiten (UN/ECE Rec 20), Ländercodes, Rechnungsarten
+- [ ] `lib/schema.ts` — Zod-Schemas für alle Entitäten (Seller, Buyer, LineItem, Invoice)
+- [ ] `lib/calculations.ts` — Netto/USt/Brutto-Berechnung mit korrekter Rundung
+- [ ] `lib/format.ts` — Währung/Datum-Formatierung (de-DE Locale)
+- [ ] `lib/xrechnung.ts` — Mapping Formular-Daten → @e-invoice-eu/core → XML
+- [ ] `lib/download.ts` — Blob-Download Helper
+- [ ] `__tests__/schema.test.ts` — Validierungs-Tests (gültig/ungültig je Feld)
+- [ ] `__tests__/calculations.test.ts` — Berechnungs-Tests (Rundung, Grenzfälle)
+- [ ] `__tests__/xrechnung.test.ts` — XML-Output gegen bekannte Struktur prüfen
 
-### Phase 4: Polish + Deploy (Tag 3)
+**Done when:** Alle Tests grün. Aus einem JSON-Objekt wird valides XRechnung-XML generiert.
 
-- Responsive Design (Mobile-First)
-- PWA-Manifest + Service Worker
-- SEO: Meta-Tags, OG-Image, robots.txt
-- README.md (Badges, Screenshots, Quick Start)
-- Vercel Production Deploy
-- GitHub Repo public stellen
+### Phase 2: UI & Formular
 
-### Phase 5: App Stores (Woche 2+)
+**Ziel:** Vollständiges, funktionierendes Formular mit Live-Berechnung und XML-Download.
 
-- Capacitor initialisieren (`npx cap init`)
-- Android-Projekt generieren (`npx cap add android`)
-- iOS-Projekt generieren (`npx cap add ios`)
-- Google Play: $25 einmalig, Android Studio Build
-- iOS App Store: $99/Jahr, Xcode Build (braucht Mac oder CI-Service)
+**Tasks:**
+- [ ] shadcn/ui Komponenten installieren (Button, Input, Label, Select, Card, Separator, Textarea)
+- [ ] `Header.tsx` + `Footer.tsx`
+- [ ] `InvoiceMetaSection.tsx` — Rechnungsnummer, Datum, Währung, etc.
+- [ ] `SellerSection.tsx` — mit länderspezifischer PLZ/USt-ID-Validierung
+- [ ] `BuyerSection.tsx`
+- [ ] `LineItemsSection.tsx` — dynamisch Positionen hinzufügen/entfernen
+- [ ] `PaymentSection.tsx` — IBAN, BIC, Zahlungsart
+- [ ] `TotalsDisplay.tsx` — live-berechnete Summen
+- [ ] `InvoiceForm.tsx` — orchestriert alle Sections, RHF + Zod
+- [ ] `useInvoiceForm.ts` — Form-State, Berechnung, Submit-Handler
+- [ ] `useXRechnung.ts` — XML-Generierung aus validiertem Form-State
+- [ ] `DownloadButtons.tsx` — XRechnung XML Download
+- [ ] `Preview.tsx` — formatierte Rechnungsvorschau
+- [ ] `App.tsx` — Layout zusammenbauen
+- [ ] Responsive Design (Mobile-First)
+
+**Done when:** Formular ausfüllen → XML downloaden → XML ist valide bei erechnungs-validator.de.
+
+### Phase 3: ZUGFeRD PDF
+
+**Ziel:** PDF/A-3 mit eingebettetem XML generieren und downloaden.
+
+**Tasks:**
+- [ ] `api/zugferd.ts` — Serverless Function implementieren
+- [ ] PDF-Template (Rechnungslayout als PDF)
+- [ ] XML-Einbettung in PDF/A-3
+- [ ] Download-Button in UI erweitern
+- [ ] Error Handling (Serverless Timeout, Validierungsfehler)
+- [ ] Lokal testen mit `vercel dev`
+
+**Done when:** PDF Download funktioniert, PDF enthält eingebettetes XML, besteht KoSIT-Validator.
+
+### Phase 4: Polish & Deploy
+
+**Ziel:** Produktionsreif.
+
+**Tasks:**
+- [ ] SEO: Meta-Tags, OG-Image, Title/Description
+- [ ] PWA: manifest.json, Service Worker (offline XML-Generierung)
+- [ ] Accessibility: aria-Labels, Keyboard-Navigation, Focus-Management
+- [ ] Error States: Nutzerfreundliche Fehlermeldungen
+- [ ] Loading States: Spinner für PDF-Generierung
+- [ ] README.md: Screenshots, Quick Start, Badges
+- [ ] Vercel Production Deploy
+- [ ] Smoke Test: Ende-zu-Ende Durchlauf auf Production
+
+**Done when:** Lighthouse >90 (Performance, A11y, SEO), README vollständig, Production-URL funktioniert.
+
+---
+
+## Entscheidungen
+
+| Frage | Entscheidung |
+|---|---|
+| Domain | Vercel-Subdomain, eigene Domain optional später |
+| Impressum | Pflicht (TMG). Platzhalter im Footer, wird vom Maintainer ausgefüllt |
+| ZUGFeRD-Scope | Vollständig — XRechnung XML + ZUGFeRD PDF/A-3 |
+| UI-Sprache | Nur Deutsch. DACH-Tool. |
+| localStorage | Ja, opt-in für Verkäufer-Daten. Ehrlich kommuniziert: "Deine Daten bleiben in deinem Browser." |
+| Vorschau | Funktionale HTML-Ansicht. Zeigt Daten korrekt, kein PDF-Layout. |
+| Positionierung | Radikal Open Source. Gratis-Tool, kein Marketing. Proof of Concept für Größeres. |
 
 ---
 
 ## Verifizierung
 
-| Was | Wie | Tool |
-|---|---|---|
-| XRechnung XML-Validität | Upload auf Validator | [erechnungs-validator.de](https://erechnungs-validator.de/) |
-| ZUGFeRD PDF-Validität | Upload auf Validator | [kositvalidator.service-bw.de](https://kositvalidator.service-bw.de/) |
-| UStG §14 Pflichtfelder | Formular ohne Pflichtfeld absenden → Fehler | Manuell + Unit Tests |
-| Berechnung | Netto × USt = korrekt | Unit Tests (vitest) |
-| Responsive | Mobile + Tablet + Desktop | Chrome DevTools |
-| Performance | Lighthouse Score > 90 | Chrome Lighthouse |
-| Build | `pnpm build` ohne Fehler | CI |
-| Lint | `pnpm lint` ohne Fehler | CI |
+| Was | Wie |
+|---|---|
+| XRechnung XML-Validität | [erechnungs-validator.de](https://erechnungs-validator.de/) |
+| ZUGFeRD PDF-Validität | [kositvalidator.service-bw.de](https://kositvalidator.service-bw.de/) |
+| UStG §14 Pflichtfelder | Unit Tests + manueller Test |
+| Berechnung korrekt | Unit Tests (Rundung, Grenzfälle) |
+| Responsive | Chrome DevTools (Mobile/Tablet/Desktop) |
+| Performance | Lighthouse >90 |
+| Build | `pnpm build` fehlerfrei |
+| Lint | `pnpm lint` fehlerfrei |
+| Tests | `pnpm test` alle grün |
 
 ---
 
-## SEO-Strategie (für späteres Ranking)
+## SEO
 
 | Element | Inhalt |
 |---|---|
-| **Title** | „E-Rechnung erstellen — Kostenloser XRechnung Generator" |
-| **Description** | „XRechnung und ZUGFeRD kostenlos erstellen. EN 16931 konform, Open Source, kein Account nötig. Sofort E-Rechnungen generieren." |
-| **H1** | „Kostenlos E-Rechnungen erstellen" |
-| **Keywords** | e-rechnung erstellen, xrechnung generator, zugferd erstellen, e-rechnung kostenlos |
-| **OG-Image** | Screenshot der App mit Formular |
-| **Domain** | TBD (z.B. e-rechnung.tools oder sub von Hauptprodukt) |
+| Title | „E-Rechnung erstellen — Kostenloser XRechnung & ZUGFeRD Generator" |
+| Description | „XRechnung und ZUGFeRD kostenlos erstellen. EN 16931 konform, Open Source, kein Account nötig." |
+| H1 | „Kostenlos E-Rechnungen erstellen" |
+| OG-Image | Screenshot der App |
+| Domain | TBD |
