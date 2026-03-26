@@ -2,41 +2,89 @@
 
 ## Übersicht
 
-Kostenloser, quelloffener E-Rechnung-Generator für den DACH-Raum. Generiert XRechnung-XML (EN 16931) und ZUGFeRD-PDF (PDF/A-3) aus einem Webformular. Kein Account, keine serverseitige Datenspeicherung, Open Source (MIT). Opt-in localStorage für Verkäufer-Stammdaten.
+Kostenloser, quelloffener E-Rechnungs-Generator für Europa. Generiert EN 16931 konforme E-Rechnungen (XRechnung CII, Factur-X, Peppol BIS UBL) und ZUGFeRD/Factur-X PDF/A-3 aus einem Webformular. Kein Account, keine serverseitige Datenspeicherung, Open Source (MIT).
 
 **Repo:** `github.com/V3SP45/e`
 **Hosting:** Vercel Free Tier
 **Lizenz:** MIT
+**Sprachen:** i18n — Englisch (Basis), Deutsch, Französisch, Niederländisch, Italienisch, Polnisch, + Community
+**Positionierung:** Radikal Open Source. Gratis. Made in Europe. Proof of Concept für Größeres.
+
+---
+
+## Länder-Support
+
+### Launch (Tier 1) — Volle Unterstützung
+
+Alle EN 16931 konform, kein nationales Sonderformat nötig.
+
+| Land | USt-Sätze | E-Rechnungs-Format | i18n Locale |
+|---|---|---|---|
+| 🇩🇪 Deutschland | 19%, 7%, 0% | XRechnung CII | de |
+| 🇦🇹 Österreich | 20%, 13%, 10%, 0% | EN 16931 CII/UBL | de |
+| 🇨🇭 Schweiz | 8.1%, 2.6%, 3.8%, 0% | EN 16931 CII | de, fr, it |
+| 🇫🇷 Frankreich | 20%, 10%, 5.5%, 2.1%, 0% | Factur-X | fr |
+| 🇳🇱 Niederlande | 21%, 9%, 0% | Peppol BIS UBL | nl |
+| 🇧🇪 Belgien | 21%, 12%, 6%, 0% | Peppol BIS UBL | nl, fr |
+| 🇱🇺 Luxemburg | 17%, 14%, 8%, 3%, 0% | Peppol BIS UBL | fr, de |
+| 🇩🇰 Dänemark | 25%, 0% | Peppol BIS UBL | en* |
+| 🇸🇪 Schweden | 25%, 12%, 6%, 0% | Peppol BIS UBL | en* |
+| 🇫🇮 Finnland | 25.5%, 14%, 10%, 0% | Peppol BIS UBL | en* |
+| 🇳🇴 Norwegen | 25%, 15%, 12%, 0% | Peppol BIS UBL | en* |
+| 🇪🇪 Estland | 22%, 9%, 0% | Peppol BIS UBL | en* |
+| 🇱🇻 Lettland | 21%, 12%, 5%, 0% | Peppol BIS UBL | en* |
+| 🇱🇹 Litauen | 21%, 9%, 5%, 0% | Peppol BIS UBL | en* |
+| 🇮🇪 Irland | 23%, 13.5%, 9%, 4.8%, 0% | Peppol BIS UBL | en |
+| 🇸🇮 Slowenien | 22%, 9.5%, 5%, 0% | Peppol BIS UBL | en* |
+| 🇭🇷 Kroatien | 25%, 13%, 5%, 0% | Peppol BIS UBL | en* |
+| 🇸🇰 Slowakei | 23%, 10%, 5%, 0% | Peppol BIS UBL | en* |
+| 🇨🇿 Tschechien | 21%, 12%, 0% | Peppol BIS UBL | en* |
+
+*en = Englisch als UI-Fallback. Native Locales können von der Community beigesteuert werden.
+
+### Später (Tier 2) — Nationales Sonderformat nötig
+
+| Land | Format | Aufwand |
+|---|---|---|
+| 🇮🇹 Italien | FatturaPA (SDI) | Hoch — eigenes XML-Schema, eigener Übermittlungsweg |
+| 🇵🇱 Polen | KSeF | Hoch — eigenes Schema, Regierungsplattform |
+| 🇭🇺 Ungarn | NAV Real-Time | Hoch — Live-Reporting an Steuerbehörde |
+| 🇬🇷 Griechenland | myDATA | Hoch — eigenes System |
+| 🇪🇸 Spanien | Factura-e (B2G) | Mittel — B2G eigenes Format, B2B geht mit EN 16931 |
+| 🇵🇹 Portugal | SAF-T Meldepflicht | Mittel — zusätzliche Reporting-Pflicht |
+| 🇷🇴 Rumänien | RO_CIUS | Mittel — nationale CIUS |
 
 ---
 
 ## Architektur
 
 ```
-┌──────────────────────────────────────────┐
-│            React SPA (Vite)              │
-│                                          │
-│  ┌──────────┐   ┌────────────────────┐   │
-│  │ Formular │──▶│ Zod-Validierung    │   │
-│  │ (RHF)    │   │ (UStG §14 Regeln) │   │
-│  └──────────┘   └─────────┬──────────┘   │
-│                           │              │
-│              ┌────────────┼────────────┐ │
-│              ▼                         ▼ │
-│  ┌───────────────────┐  ┌─────────────┐ │
-│  │ XRechnung XML     │  │ ZUGFeRD PDF │ │
-│  │ @e-invoice-eu/core│  │ POST /api/  │ │
-│  │ (100% Browser)    │  │ zugferd     │ │
-│  └────────┬──────────┘  └──────┬──────┘ │
-│           │                    │         │
-│      Download XML        Download PDF   │
-└───────────┼────────────────────┼─────────┘
-            │                    │
-            │         ┌──────────▼─────────┐
-            │         │ Vercel Serverless   │
-            │         │ PDF/A-3 Generierung │
-            │         │ (kein Datenspeicher)│
-            │         └────────────────────┘
+┌──────────────────────────────────────────────┐
+│              React SPA (Vite)                │
+│                                              │
+│  ┌──────────┐   ┌─────────────────────────┐  │
+│  │ Formular │──▶│ Zod-Validierung         │  │
+│  │ (RHF)    │   │ (dynamisch per Land)    │  │
+│  └──────────┘   └──────────┬──────────────┘  │
+│                            │                 │
+│               ┌────────────┼──────────┐      │
+│               ▼                       ▼      │
+│  ┌────────────────────┐  ┌────────────────┐  │
+│  │ E-Rechnung XML     │  │ ZUGFeRD PDF    │  │
+│  │ @e-invoice-eu/core │  │ POST /api/pdf  │  │
+│  │ XRechnung / UBL /  │  │                │  │
+│  │ Factur-X / Peppol  │  │                │  │
+│  │ (100% Browser)     │  │                │  │
+│  └────────┬───────────┘  └───────┬────────┘  │
+│           │                      │           │
+│      Download XML          Download PDF      │
+└───────────┼──────────────────────┼───────────┘
+            │                      │
+            │           ┌──────────▼──────────┐
+            │           │ Vercel Serverless    │
+            │           │ PDF/A-3 Generierung  │
+            │           │ (stateless)          │
+            │           └─────────────────────┘
 ```
 
 ### Design-Entscheidungen
@@ -45,9 +93,10 @@ Kostenloser, quelloffener E-Rechnung-Generator für den DACH-Raum. Generiert XRe
 |---|---|
 | **Vite + React statt Next.js** | Pure SPA, kein SSR nötig, Capacitor-kompatibel |
 | **Client-side XML** | Kein Server = kein Datenschutz-Problem, offline-fähig |
-| **Serverless nur für PDF** | PDF/A-3 im Browser nicht möglich, Vercel Free Tier reicht |
-| **shadcn/ui** | Copy-paste Komponenten, kein Lock-in, Tailwind-basiert |
-| **Kein Monorepo** | Single-Page-Tool, Monorepo wäre Overhead |
+| **Serverless nur für PDF** | PDF/A-3 im Browser nicht möglich, Vercel Free reicht |
+| **shadcn/ui** | Copy-paste, kein Lock-in, Tailwind-basiert |
+| **react-i18next** | Bewährter Standard, JSON-basierte Locale-Dateien, Community-beitragsfähig |
+| **Länderdaten als JSON** | USt-Sätze, Validierung, Formate pro Land — erweiterbar ohne Code-Änderung |
 
 ---
 
@@ -59,26 +108,27 @@ Kostenloser, quelloffener E-Rechnung-Generator für den DACH-Raum. Generiert XRe
 |---|---|---|
 | react | ^19 | UI-Framework |
 | react-dom | ^19 | DOM-Rendering |
-| vite | ^6 | Build-Tool, Dev-Server |
+| vite | ^6 | Build-Tool |
 | typescript | ^5.7 | Type Safety |
 | tailwindcss | ^4 | Styling |
 | react-hook-form | ^7 | Formular-Management |
-| @hookform/resolvers | ^5 | Zod-Integration für RHF |
+| @hookform/resolvers | ^5 | Zod-Integration |
 | zod | ^3 | Schema-Validierung |
+| react-i18next | ^15 | Internationalisierung |
+| i18next | ^24 | i18n Core |
 | lucide-react | ^0.468 | Icons |
 
-### E-Rechnung Libraries (zu verifizieren)
+### E-Rechnung Libraries (Phase 0: evaluieren)
 
 | Paket | Zweck | Risiko |
 |---|---|---|
-| **@e-invoice-eu/core** | XRechnung/ZUGFeRD XML (EN 16931) | Niedrig — aktiv maintained, gute Docs |
-| **node-zugferd** ODER **pdf-lib + manuelle Einbettung** | ZUGFeRD PDF/A-3 | **Hoch** — muss evaluiert werden |
+| **@e-invoice-eu/core** | XML-Generierung (CII, UBL, XRechnung, Peppol) | Niedrig |
+| **PDF/A-3 Library** | ZUGFeRD/Factur-X PDF | **Hoch — muss evaluiert werden** |
 
-> **AKTION vor Phase 2:** Library-Evaluation für PDF/A-3. Optionen prüfen:
-> 1. `node-zugferd` — wenn stabil und maintained
-> 2. `@e-invoice-eu/core` hat evtl. eigene PDF-Unterstützung
-> 3. `pdf-lib` + manuelles XML-Embedding als Fallback
-> 4. Puppeteer/Chromium-basierte Lösung als letzter Ausweg (teuer auf Serverless)
+> **Phase 0 Aktion:** PDF/A-3 Library evaluieren:
+> 1. `node-zugferd` — wenn stabil
+> 2. Eigene PDF-Lösung mit `pdf-lib` + XML-Embedding
+> 3. Puppeteer als Fallback (teuer auf Serverless)
 
 ### Dev Dependencies
 
@@ -97,40 +147,75 @@ Kostenloser, quelloffener E-Rechnung-Generator für den DACH-Raum. Generiert XRe
 e/
 ├── src/
 │   ├── components/
-│   │   ├── ui/                    # shadcn/ui Basis-Komponenten
-│   │   ├── InvoiceForm.tsx        # Hauptformular (orchestriert Sections)
-│   │   ├── SellerSection.tsx      # Verkäufer-Daten
-│   │   ├── BuyerSection.tsx       # Käufer-Daten
-│   │   ├── InvoiceMetaSection.tsx # Rechnungsnummer, Datum, etc.
-│   │   ├── LineItemsSection.tsx   # Rechnungspositionen (dynamisch)
-│   │   ├── PaymentSection.tsx     # Zahlungsbedingungen
-│   │   ├── TotalsDisplay.tsx      # Netto/USt/Brutto live-Berechnung
-│   │   ├── Preview.tsx            # Rechnungs-Vorschau
-│   │   ├── DownloadButtons.tsx    # XML + PDF Download
-│   │   ├── Header.tsx             # App-Header
-│   │   └── Footer.tsx             # GitHub-Link, Impressum
+│   │   ├── ui/                      # shadcn/ui Basis-Komponenten
+│   │   ├── InvoiceForm.tsx          # Hauptformular (orchestriert Sections)
+│   │   ├── InvoiceMetaSection.tsx   # Rechnungsnummer, Datum, Währung, Land
+│   │   ├── SellerSection.tsx        # Verkäufer-Daten
+│   │   ├── BuyerSection.tsx         # Käufer-Daten
+│   │   ├── LineItemsSection.tsx     # Positionen (dynamisch)
+│   │   ├── PaymentSection.tsx       # Zahlungsbedingungen
+│   │   ├── TotalsDisplay.tsx        # Live-Berechnung
+│   │   ├── Preview.tsx              # Rechnungs-Vorschau (HTML)
+│   │   ├── DownloadButtons.tsx      # XML + PDF Download
+│   │   ├── LanguageSwitcher.tsx     # Sprachauswahl
+│   │   ├── Header.tsx
+│   │   └── Footer.tsx               # + Impressum-Link
 │   ├── lib/
-│   │   ├── schema.ts             # Zod-Schemas (Invoice, Seller, Buyer, LineItem)
-│   │   ├── xrechnung.ts          # Mapping Formular → @e-invoice-eu/core → XML
-│   │   ├── calculations.ts       # Netto/USt/Brutto Logik
-│   │   ├── format.ts             # Währung, Datum, Nummern
-│   │   ├── download.ts           # Blob-Download Utilities
-│   │   └── constants.ts          # USt-Sätze, UN/ECE Einheiten, Ländercodes
+│   │   ├── schema.ts               # Zod-Schemas (dynamisch per Land)
+│   │   ├── xrechnung.ts            # Mapping → @e-invoice-eu/core → XML
+│   │   ├── calculations.ts         # Netto/USt/Brutto mit korrekter Rundung
+│   │   ├── format.ts               # Locale-aware Formatierung
+│   │   ├── download.ts             # Blob-Download Helper
+│   │   ├── countries.ts            # Länderdaten-Loader
+│   │   └── storage.ts              # localStorage opt-in für Seller-Daten
+│   ├── data/
+│   │   └── countries/
+│   │       ├── _types.ts            # TypeScript Interface für Country-Config
+│   │       ├── de.ts                # Deutschland: USt, Validierung, Format
+│   │       ├── at.ts                # Österreich
+│   │       ├── ch.ts                # Schweiz
+│   │       ├── fr.ts                # Frankreich
+│   │       ├── nl.ts                # Niederlande
+│   │       ├── be.ts                # Belgien
+│   │       ├── lu.ts                # Luxemburg
+│   │       ├── dk.ts                # Dänemark
+│   │       ├── se.ts                # Schweden
+│   │       ├── fi.ts                # Finnland
+│   │       ├── no.ts                # Norwegen
+│   │       ├── ee.ts                # Estland
+│   │       ├── lv.ts                # Lettland
+│   │       ├── lt.ts                # Litauen
+│   │       ├── ie.ts                # Irland
+│   │       ├── si.ts                # Slowenien
+│   │       ├── hr.ts                # Kroatien
+│   │       ├── sk.ts                # Slowakei
+│   │       ├── cz.ts                # Tschechien
+│   │       └── index.ts            # Registry: alle Länder exportieren
+│   ├── i18n/
+│   │   ├── config.ts               # i18next Setup
+│   │   └── locales/
+│   │       ├── en.json             # Englisch (Basis/Fallback)
+│   │       ├── de.json             # Deutsch
+│   │       ├── fr.json             # Französisch
+│   │       └── nl.json             # Niederländisch
 │   ├── hooks/
-│   │   ├── useInvoiceForm.ts     # Form-State + live Berechnung
-│   │   └── useXRechnung.ts       # XML-Generierung Hook
+│   │   ├── useInvoiceForm.ts       # Form-State + Berechnung
+│   │   ├── useXRechnung.ts         # XML-Generierung
+│   │   ├── useCountry.ts           # Aktives Land + Config
+│   │   └── useSellerStorage.ts     # localStorage opt-in
 │   ├── App.tsx
 │   ├── main.tsx
-│   └── index.css                  # Tailwind Imports
+│   └── index.css
 ├── api/
-│   └── zugferd.ts                 # Vercel Serverless: JSON → ZUGFeRD PDF/A-3
+│   └── pdf.ts                      # Vercel Serverless: JSON → PDF/A-3
 ├── public/
 │   ├── favicon.svg
 │   └── og-image.png
 ├── __tests__/
 │   ├── schema.test.ts
 │   ├── calculations.test.ts
-│   └── xrechnung.test.ts
+│   ├── xrechnung.test.ts
+│   └── countries.test.ts           # Länderdaten-Validierung
 ├── PROJEKTPLAN.md
 ├── AGENTS.md
 ├── CLAUDE.md
@@ -143,9 +228,34 @@ e/
 └── package.json
 ```
 
+### Country-Config Interface
+
+Jedes Land ist eine TypeScript-Datei mit einheitlicher Struktur:
+
+```typescript
+interface CountryConfig {
+  code: string;                    // ISO 3166-1 alpha-2
+  name: string;                    // Englischer Name
+  currency: string;                // ISO 4217 (EUR, CHF, NOK, etc.)
+  locale: string;                  // Primäres Locale
+  invoiceFormat: 'xrechnung-cii' | 'factur-x' | 'peppol-bis-ubl';
+  vatRates: VatRate[];             // Steuersätze
+  vatIdFormat?: RegExp;            // USt-ID Regex
+  postalCodeFormat?: RegExp;       // PLZ Regex
+  requiredFields?: string[];       // Zusätzliche Pflichtfelder (z.B. Leitweg-ID für DE B2G)
+}
+
+interface VatRate {
+  rate: number;                    // z.B. 19
+  label: string;                   // i18n-Key oder String
+  category: 'S' | 'Z' | 'E' | 'AE'; // EN 16931 Kategorie
+  isDefault?: boolean;
+}
+```
+
 ---
 
-## Datenmodell (Formularfelder)
+## Datenmodell
 
 ### Rechnungs-Stammdaten
 
@@ -153,207 +263,119 @@ e/
 |---|---|---|---|
 | Rechnungsnummer | BT-1 | Ja | Nicht leer, max 50 Zeichen |
 | Rechnungsdatum | BT-2 | Ja | Gültiges ISO-Datum |
-| Rechnungsart | BT-3 | Ja | 380 (Rechnung), 381 (Gutschrift), 384 (Korrektur) |
-| Währung | BT-5 | Ja | EUR (Default), CHF, USD |
+| Rechnungsart | BT-3 | Ja | 380, 381, 384 |
+| Währung | BT-5 | Ja | Aus CountryConfig, überschreibbar |
 | Leistungszeitraum Start | BT-73 | Ja | Gültiges Datum |
 | Leistungszeitraum Ende | BT-74 | Ja | ≥ Start |
 | Fälligkeitsdatum | BT-9 | Nein | ≥ Rechnungsdatum |
-| Buyer Reference | BT-10 | Ja | XRechnung-Pflicht (Leitweg-ID oder freier Text) |
+| Buyer Reference | BT-10 | Ja | XRechnung-Pflicht, für andere Formate optional |
+| Seller-Land | — | Ja | Bestimmt CountryConfig + Format |
+| Buyer-Land | — | Ja | ISO 3166-1 alpha-2 |
 
-### Verkäufer (Seller)
+### Verkäufer / Käufer / Positionen
 
-| Feld | BT-ID | Pflicht | Validierung |
-|---|---|---|---|
-| Name | BT-27 | Ja | Min 2 Zeichen |
-| Straße | BT-35 | Ja | Nicht leer |
-| PLZ | BT-38 | Ja | Länderspezifisch (DE: 5, AT/CH: 4 Ziffern) |
-| Ort | BT-37 | Ja | Min 2 Zeichen |
-| Land | BT-40 | Ja | ISO 3166-1 alpha-2 |
-| USt-ID | BT-31 | Ja* | DE: `DE\d{9}`, AT: `ATU\d{8}`, CH: `CHE-\d{3}\.\d{3}\.\d{3}` |
-| Steuernummer | BT-32 | Nein | Alternativ zu USt-ID |
-| E-Mail | BT-34 | Nein | E-Mail-Format |
-| IBAN | BT-84 | Nein | IBAN-Format |
-| BIC | BT-86 | Nein | 8 oder 11 Zeichen |
-
-*USt-ID oder Steuernummer — mindestens eins muss angegeben sein.
-
-### Käufer (Buyer)
-
-| Feld | BT-ID | Pflicht | Validierung |
-|---|---|---|---|
-| Name | BT-44 | Ja | Min 2 Zeichen |
-| Straße | BT-50 | Ja | Nicht leer |
-| PLZ | BT-53 | Ja | Länderspezifisch |
-| Ort | BT-52 | Ja | Min 2 Zeichen |
-| Land | BT-55 | Ja | ISO 3166-1 alpha-2 |
-| USt-ID | BT-48 | Nein | Länderspezifisch |
-
-### Rechnungspositionen (Line Items)
-
-| Feld | BT-ID | Pflicht | Validierung |
-|---|---|---|---|
-| Beschreibung | BT-153 | Ja | Min 2 Zeichen |
-| Menge | BT-129 | Ja | > 0, max 2 Dezimalstellen |
-| Einheit | BT-130 | Ja | UN/ECE Rec 20 Code |
-| Einzelpreis (netto) | BT-146 | Ja | ≥ 0, max 2 Dezimalstellen |
-| USt-Kategorie | BT-151 | Ja | S / Z / E / AE |
-| USt-Satz | BT-152 | Ja | Abhängig von Land + Kategorie |
-
-Mindestens 1 Position. Dynamisch erweiterbar.
+*(Identisch zum bisherigen Plan — länderspezifische Validierung wird dynamisch aus CountryConfig geladen.)*
 
 ### Berechnungslogik
 
 ```
-Position Netto  = Menge × Einzelpreis
-Position USt    = Position Netto × (USt-Satz / 100)
+Position Netto  = Menge × Einzelpreis        → runden auf 2 Dezimalstellen
+Position USt    = Position Netto × (Satz/100) → runden auf 2 Dezimalstellen
 Position Brutto = Position Netto + Position USt
 
 Gesamt Netto    = Σ Position Netto
-Gesamt USt      = Σ Position USt (gruppiert nach USt-Satz für XML)
+Gesamt USt      = Σ Position USt (gruppiert nach USt-Satz)
 Gesamt Brutto   = Gesamt Netto + Gesamt USt
 ```
-
-Rundung: Auf 2 Dezimalstellen pro Position, dann summieren (nicht umgekehrt).
-
----
-
-## XRechnung-Generierung
-
-### Library: @e-invoice-eu/core
-
-- 100% Client-Side
-- Input: JSON-Objekt → Output: CII XML
-- Unterstützt XRechnung CIUS
-
-### XRechnung-spezifische Regeln (BR-DE-*)
-
-- BT-10 (Buyer Reference) ist **immer** Pflicht
-- BG-16 (Payment Means) ist Pflicht → mindestens Zahlungsart angeben
-- Leitweg-ID für öffentliche Auftraggeber
-- Seller muss USt-ID ODER Steuernummer haben
-
-### Generierungsflow
-
-```
-Formular (Zod-validiert)
-  → Mapping auf @e-invoice-eu/core Format
-  → core.generate({ format: 'xrechnung-cii' })
-  → XML String
-  → Blob Download als .xml
-```
-
----
-
-## ZUGFeRD PDF/A-3
-
-### Serverless Endpoint: POST /api/zugferd
-
-**Input:** Invoice-JSON (gleiche Struktur wie Formular-State)
-**Output:** `application/pdf` Binary
-
-### Flow
-
-```
-Client POST → Server validiert (Zod) → XML generieren → PDF erzeugen
-→ XML in PDF/A-3 einbetten → PDF Binary zurück → Client Download
-```
-
-### Datenschutz
-
-- Keine Daten werden gespeichert oder geloggt
-- Serverless Function ist stateless
-- Daten existieren nur während der Request-Verarbeitung
 
 ---
 
 ## Phasenplan
 
-### Phase 0: Vorbereitung & Evaluation
+### Phase 0: Setup & Evaluation
 
-**Ziel:** Fundament legen, Risiken eliminieren.
+**Ziel:** Fundament steht, Risiken eliminiert.
 
-**Tasks:**
-- [ ] Library-Check: `@e-invoice-eu/core` installieren, Beispiel-XML generieren, gegen Validator prüfen
-- [ ] Library-Check: PDF/A-3-Lösung evaluieren (node-zugferd vs. Alternativen)
+- [ ] Library-Check: `@e-invoice-eu/core` — installieren, Beispiel-XML generieren (CII + UBL), gegen Validator prüfen
+- [ ] Library-Check: PDF/A-3-Lösung evaluieren und Entscheidung dokumentieren
 - [ ] Vite + React + TypeScript + Tailwind + shadcn/ui initialisieren
-- [ ] Projektstruktur anlegen (leere Dateien/Ordner)
+- [ ] i18next Setup + Basis-Locales (en, de)
+- [ ] Projektstruktur anlegen
 - [ ] Path-Alias `@/` konfigurieren
 - [ ] ESLint + Vitest konfigurieren
-- [ ] `pnpm dev` und `pnpm build` laufen fehlerfrei
-- [ ] vercel.json anlegen
-- [ ] LICENSE (MIT) + README.md Grundgerüst
+- [ ] vercel.json, LICENSE (MIT), README.md Grundgerüst
+- [ ] `pnpm dev`, `pnpm build`, `pnpm lint` laufen
 
-**Done when:** `pnpm dev` zeigt leere React-App, `pnpm build` + `pnpm lint` laufen durch, Library-Evaluation abgeschlossen und Ergebnis dokumentiert.
+**Done when:** Leere App mit i18n + Routing läuft, Library-Evaluation abgeschlossen.
 
 ### Phase 1: Datenmodell & Kernlogik
 
-**Ziel:** Die gesamte Nicht-UI-Logik steht und ist getestet.
+**Ziel:** Alle Nicht-UI-Logik steht und ist getestet.
 
-**Tasks:**
-- [ ] `lib/constants.ts` — USt-Sätze, Einheiten (UN/ECE Rec 20), Ländercodes, Rechnungsarten
-- [ ] `lib/schema.ts` — Zod-Schemas für alle Entitäten (Seller, Buyer, LineItem, Invoice)
-- [ ] `lib/calculations.ts` — Netto/USt/Brutto-Berechnung mit korrekter Rundung
-- [ ] `lib/format.ts` — Währung/Datum-Formatierung (de-DE Locale)
-- [ ] `lib/xrechnung.ts` — Mapping Formular-Daten → @e-invoice-eu/core → XML
-- [ ] `lib/download.ts` — Blob-Download Helper
-- [ ] `__tests__/schema.test.ts` — Validierungs-Tests (gültig/ungültig je Feld)
-- [ ] `__tests__/calculations.test.ts` — Berechnungs-Tests (Rundung, Grenzfälle)
-- [ ] `__tests__/xrechnung.test.ts` — XML-Output gegen bekannte Struktur prüfen
+- [ ] `data/countries/` — alle 19 Länderkonfigurationen + TypeScript Interface
+- [ ] `lib/schema.ts` — Zod-Schemas, dynamisch validierend per CountryConfig
+- [ ] `lib/calculations.ts` — Netto/USt/Brutto mit korrekter Rundung
+- [ ] `lib/format.ts` — Locale-aware Währung/Datum
+- [ ] `lib/xrechnung.ts` — Mapping Formular → @e-invoice-eu/core (CII, UBL, Factur-X je nach Land)
+- [ ] `lib/download.ts` — Blob-Download
+- [ ] `lib/storage.ts` — localStorage opt-in für Seller-Daten
+- [ ] `__tests__/` — Schema, Berechnung, XML-Output, Länderdaten-Konsistenz
 
-**Done when:** Alle Tests grün. Aus einem JSON-Objekt wird valides XRechnung-XML generiert.
+**Done when:** Alle Tests grün. Aus einem JSON-Objekt wird valides XML generiert für DE (XRechnung CII), FR (Factur-X), NL (Peppol BIS UBL).
 
 ### Phase 2: UI & Formular
 
-**Ziel:** Vollständiges, funktionierendes Formular mit Live-Berechnung und XML-Download.
+**Ziel:** Funktionierendes Formular, Land wählen, XML runterladen.
 
-**Tasks:**
-- [ ] shadcn/ui Komponenten installieren (Button, Input, Label, Select, Card, Separator, Textarea)
-- [ ] `Header.tsx` + `Footer.tsx`
-- [ ] `InvoiceMetaSection.tsx` — Rechnungsnummer, Datum, Währung, etc.
-- [ ] `SellerSection.tsx` — mit länderspezifischer PLZ/USt-ID-Validierung
-- [ ] `BuyerSection.tsx`
-- [ ] `LineItemsSection.tsx` — dynamisch Positionen hinzufügen/entfernen
-- [ ] `PaymentSection.tsx` — IBAN, BIC, Zahlungsart
-- [ ] `TotalsDisplay.tsx` — live-berechnete Summen
-- [ ] `InvoiceForm.tsx` — orchestriert alle Sections, RHF + Zod
-- [ ] `useInvoiceForm.ts` — Form-State, Berechnung, Submit-Handler
-- [ ] `useXRechnung.ts` — XML-Generierung aus validiertem Form-State
-- [ ] `DownloadButtons.tsx` — XRechnung XML Download
-- [ ] `Preview.tsx` — formatierte Rechnungsvorschau
-- [ ] `App.tsx` — Layout zusammenbauen
-- [ ] Responsive Design (Mobile-First)
+- [ ] shadcn/ui Komponenten
+- [ ] Header + Footer + LanguageSwitcher
+- [ ] InvoiceMetaSection (mit Länderwahl → steuert Format + Validierung)
+- [ ] SellerSection + BuyerSection (dynamische Validierung)
+- [ ] LineItemsSection (dynamisch, USt-Sätze aus CountryConfig)
+- [ ] PaymentSection
+- [ ] TotalsDisplay (live)
+- [ ] InvoiceForm (orchestriert alles)
+- [ ] useInvoiceForm + useXRechnung + useCountry + useSellerStorage
+- [ ] DownloadButtons (XML)
+- [ ] Preview (funktionale HTML-Ansicht)
+- [ ] Responsive (Mobile-First)
+- [ ] i18n: de.json, fr.json, nl.json vollständig
 
-**Done when:** Formular ausfüllen → XML downloaden → XML ist valide bei erechnungs-validator.de.
+**Done when:** Formular → Land wählen → Ausfüllen → XML Download → Valide bei erechnungs-validator.de (DE) und Peppol Validator (NL).
 
-### Phase 3: ZUGFeRD PDF
+### Phase 3: ZUGFeRD / Factur-X PDF
 
-**Ziel:** PDF/A-3 mit eingebettetem XML generieren und downloaden.
+**Ziel:** PDF/A-3 mit eingebettetem XML.
 
-**Tasks:**
-- [ ] `api/zugferd.ts` — Serverless Function implementieren
-- [ ] PDF-Template (Rechnungslayout als PDF)
-- [ ] XML-Einbettung in PDF/A-3
-- [ ] Download-Button in UI erweitern
-- [ ] Error Handling (Serverless Timeout, Validierungsfehler)
+- [ ] `api/pdf.ts` — Serverless Function
+- [ ] PDF-Layout (Rechnungsdaten als lesbares PDF)
+- [ ] XML-Einbettung als PDF/A-3 Attachment
+- [ ] Download-Button in UI
+- [ ] Error Handling
 - [ ] Lokal testen mit `vercel dev`
 
-**Done when:** PDF Download funktioniert, PDF enthält eingebettetes XML, besteht KoSIT-Validator.
+**Done when:** PDF Download funktioniert, eingebettetes XML besteht KoSIT-Validator.
 
 ### Phase 4: Polish & Deploy
 
 **Ziel:** Produktionsreif.
 
-**Tasks:**
-- [ ] SEO: Meta-Tags, OG-Image, Title/Description
-- [ ] PWA: manifest.json, Service Worker (offline XML-Generierung)
-- [ ] Accessibility: aria-Labels, Keyboard-Navigation, Focus-Management
-- [ ] Error States: Nutzerfreundliche Fehlermeldungen
-- [ ] Loading States: Spinner für PDF-Generierung
-- [ ] README.md: Screenshots, Quick Start, Badges
+- [ ] SEO: Meta-Tags, OG-Image
+- [ ] PWA: manifest.json (offline XML-Generierung)
+- [ ] Accessibility: aria-Labels, Keyboard-Nav, Focus-Management
+- [ ] Error/Loading States
+- [ ] README.md: Screenshots, Länderliste, Contributing Guide (wie man ein Land hinzufügt)
+- [ ] Impressum-Platzhalter
 - [ ] Vercel Production Deploy
-- [ ] Smoke Test: Ende-zu-Ende Durchlauf auf Production
+- [ ] Smoke Test auf Production
 
-**Done when:** Lighthouse >90 (Performance, A11y, SEO), README vollständig, Production-URL funktioniert.
+**Done when:** Lighthouse >90, README fertig, Production live.
+
+### Später: Tier 2 Länder
+
+- [ ] Italien (FatturaPA) — eigenes XML-Schema, SDI-Anbindung
+- [ ] Polen (KSeF) — eigenes Schema
+- [ ] Weitere nationale Formate nach Community-Bedarf
 
 ---
 
@@ -362,12 +384,13 @@ Client POST → Server validiert (Zod) → XML generieren → PDF erzeugen
 | Frage | Entscheidung |
 |---|---|
 | Domain | Vercel-Subdomain, eigene Domain optional später |
-| Impressum | Pflicht (TMG). Platzhalter im Footer, wird vom Maintainer ausgefüllt |
-| ZUGFeRD-Scope | Vollständig — XRechnung XML + ZUGFeRD PDF/A-3 |
-| UI-Sprache | Nur Deutsch. DACH-Tool. |
-| localStorage | Ja, opt-in für Verkäufer-Daten. Ehrlich kommuniziert: "Deine Daten bleiben in deinem Browser." |
-| Vorschau | Funktionale HTML-Ansicht. Zeigt Daten korrekt, kein PDF-Layout. |
-| Positionierung | Radikal Open Source. Gratis-Tool, kein Marketing. Proof of Concept für Größeres. |
+| Impressum | Platzhalter im Footer, Maintainer füllt aus |
+| ZUGFeRD-Scope | Vollständig — XML + PDF/A-3 |
+| UI-Sprache | i18n: Englisch (Basis), Deutsch, Französisch, Niederländisch. Weitere community-driven. |
+| localStorage | Opt-in für Seller-Daten. "Deine Daten bleiben in deinem Browser." |
+| Vorschau | Funktionale HTML-Ansicht |
+| Positionierung | Radikal Open Source. Gratis. Made in Europe, for Europe. |
+| Tier 2 Länder (IT, PL) | EN 16931 Cross-Border sofort, nationale Formate später |
 
 ---
 
@@ -375,15 +398,18 @@ Client POST → Server validiert (Zod) → XML generieren → PDF erzeugen
 
 | Was | Wie |
 |---|---|
-| XRechnung XML-Validität | [erechnungs-validator.de](https://erechnungs-validator.de/) |
-| ZUGFeRD PDF-Validität | [kositvalidator.service-bw.de](https://kositvalidator.service-bw.de/) |
-| UStG §14 Pflichtfelder | Unit Tests + manueller Test |
-| Berechnung korrekt | Unit Tests (Rundung, Grenzfälle) |
-| Responsive | Chrome DevTools (Mobile/Tablet/Desktop) |
-| Performance | Lighthouse >90 |
+| XRechnung XML | [erechnungs-validator.de](https://erechnungs-validator.de/) |
+| Peppol BIS UBL | [Peppol Validator](https://peppol.helger.com/public/locale-en_US/menuitem-validation-bis3) |
+| Factur-X | [Factur-X Validator](https://services.fnfe-mpe.org/DEMAT/index.php) |
+| ZUGFeRD PDF | [kositvalidator.service-bw.de](https://kositvalidator.service-bw.de/) |
+| Länderdaten | Unit Tests: USt-Sätze, Regex-Formate, Pflichtfelder |
+| Berechnung | Unit Tests (Rundung, Grenzfälle, Cross-Country) |
+| i18n | Alle Keys in allen Locale-Dateien vorhanden |
 | Build | `pnpm build` fehlerfrei |
 | Lint | `pnpm lint` fehlerfrei |
 | Tests | `pnpm test` alle grün |
+| Responsive | Chrome DevTools |
+| Performance | Lighthouse >90 |
 
 ---
 
@@ -391,8 +417,21 @@ Client POST → Server validiert (Zod) → XML generieren → PDF erzeugen
 
 | Element | Inhalt |
 |---|---|
-| Title | „E-Rechnung erstellen — Kostenloser XRechnung & ZUGFeRD Generator" |
-| Description | „XRechnung und ZUGFeRD kostenlos erstellen. EN 16931 konform, Open Source, kein Account nötig." |
-| H1 | „Kostenlos E-Rechnungen erstellen" |
-| OG-Image | Screenshot der App |
-| Domain | TBD |
+| Title | "Free E-Invoice Generator — XRechnung, Factur-X, Peppol BIS" |
+| Description | "Create EN 16931 compliant e-invoices for free. XRechnung, Factur-X, Peppol BIS. 19 European countries. Open Source, no account needed." |
+| H1 | Per Locale: DE "Kostenlos E-Rechnungen erstellen", EN "Create E-Invoices for Free" |
+| OG-Image | App Screenshot mit Länderflaggen |
+
+---
+
+## Contributing (für README.md)
+
+### Ein Land hinzufügen
+
+1. Erstelle `src/data/countries/{code}.ts` nach dem `CountryConfig` Interface
+2. Registriere es in `src/data/countries/index.ts`
+3. Optional: Füge ein Locale-File hinzu unter `src/i18n/locales/{lang}.json`
+4. Schreibe Tests in `__tests__/countries.test.ts`
+5. PR öffnen
+
+Das ist absichtlich so simpel gehalten, damit die Community Länder beitragen kann, ohne die Kernlogik verstehen zu müssen.

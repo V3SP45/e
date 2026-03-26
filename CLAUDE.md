@@ -9,12 +9,14 @@
 - Preview: `pnpm preview`
 
 ## Architecture
-- React 19 + Vite 8 + TypeScript 5.9 (strict)
+- React 19 + Vite 6 + TypeScript 5.7 (strict)
 - Tailwind CSS 4 + shadcn/ui
 - Forms: React Hook Form + Zod
-- XRechnung: @e-invoice-eu/core (100% client-side)
-- ZUGFeRD PDF: node-zugferd via Vercel Serverless (`api/zugferd.ts`)
-- No database, no auth, no data storage
+- i18n: react-i18next (en base, de, fr, nl)
+- E-Invoice XML: @e-invoice-eu/core (100% client-side)
+- PDF/A-3: Serverless function (`api/pdf.ts`)
+- No database, no auth, no server-side data storage
+- Seller data optionally in localStorage (opt-in)
 
 ## Code Style
 - TypeScript strict, no `any`
@@ -23,25 +25,35 @@
 - Zod schemas = single source of truth
 - Files: kebab-case. Components: PascalCase
 - Imports: `@/` alias → `src/`
-- UI text in German, code in English
+- All UI text via i18n `t()` — never hardcoded
+- Country-specific logic via CountryConfig — never hardcoded in core
 
 ## Structure
 - `src/lib/` — Pure logic (schema, calculations, XML generation)
+- `src/data/countries/` — Per-country config (VAT rates, formats, validation)
+- `src/i18n/locales/` — Translation JSON files
 - `src/components/` — React components
 - `src/components/ui/` — shadcn/ui base
 - `src/hooks/` — Custom hooks
 - `api/` — Vercel Serverless Functions
-- `specs/` — Module specifications
 
-## Domain
-- XRechnung = EN 16931 CII XML for Germany
-- ZUGFeRD = PDF/A-3 with embedded XML
-- UStG §14 = mandatory invoice fields (DE law)
-- VAT: DE 19%/7%, AT 20%/10%/13%, CH 8.1%/2.6%/3.8%
+## Country System
+Each country = one TypeScript file in `src/data/countries/{code}.ts`.
+Interface: `CountryConfig` (code, currency, locale, invoiceFormat, vatRates, vatIdFormat, postalCodeFormat).
+Adding a country requires no core logic changes.
+
+## Supported Formats
+- XRechnung CII — Germany
+- Factur-X — France
+- Peppol BIS UBL — Nordics, Benelux, Baltics, Ireland, etc.
+
+## 19 Launch Countries
+DE, AT, CH, FR, NL, BE, LU, DK, SE, FI, NO, EE, LV, LT, IE, SI, HR, SK, CZ
 
 ## Boundaries
-- NEVER store user data (no DB, no localStorage for invoices)
+- NEVER store user data server-side
 - NEVER use `any` type
 - NEVER import `node:*` in client code
+- NEVER hardcode UI strings or country logic
 - ASK before adding dependencies
-- ASK before changing Zod schemas
+- ASK before changing Zod schemas or API contracts
